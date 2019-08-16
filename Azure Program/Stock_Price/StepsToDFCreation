@@ -1,0 +1,64 @@
+1. Create Resource Group
+2. Create Storage Account with Created Resource Group
+	1. Select Blob From Storage Account Name and then Create Container
+	2. Upload CSV files To Blob Container
+
+3. Create COSMOS DB with Created Resource Group
+
+4. Create Azure Databricks with Created Resource Group
+	1.Click on Launch Workspace
+	2.Create Cluster 
+	3.Install libraries under cluster
+	4.Add notebook files to Workspace
+	5.In notebook write a code to access Blob account by passing accountname,account_key
+		block_blob_service = BlockBlobService(account_name='samstoragenew', 					           account_key='6LfiZw6I0vdxfHOBQK9JjVSlNWtky8OZa52zb8LpGoJtAIG1buAPTyHWCDunYcbuO8hYcim3drWPYDzwdWv7Gg==')
+	
+	6.Read CSV file from Blob Container by passing ContainerName, BlobFileName, LocalFileName to save
+		block_blob_service.get_blob_to_path('storagecontainer',BlobFileName,Localfilename)
+
+	7.Store the Predicted Output,X_Test Result to COSMOSDB
+
+		client = cosmos_client.CosmosClient(url_connection='https://samcosmosdb.documents.azure.com:443/', auth={'masterKey': '8T2ueEuMFOFQE5exKfwB3k0minrqYxRk69SUxjpe0qLIZjvWXtOlBeje6HhsBTGy5tUfuX9v7gSAupGQksb5dg=='})
+
+		db1 = client.ReadDatabase('dbs/SPTestdb')
+		# collection_link = database_link + '/colls/{0}'.format('SPTestdbContainer')
+		# container = client.ReadContainer(collection_link,options)
+		# db1 = client.CreateDatabase({ 'id': 'SPTestdb'})
+
+		options = {'offerThroughput': 400}
+
+		container_definition = {
+		    'id': dbutils.widgets.get("containerName")
+		}
+
+		# Create a container
+		container = client.CreateContainer(db1['_self'],container_definition,options)
+
+		for i in range(0,len(output)):
+		  X = X_Test[i].tolist()
+		  item1 = client.CreateItem(container['_self'], {
+		      'id': str(i+1),     
+		      'Open': X[0],
+		      'High':X[1],
+		      'Low':X[2],
+		      'ClosingPred': output[i]
+		      }
+		)
+
+
+5. Create Data Factory with Created Resource Group
+	1.Click on Author & Monitor
+	2.Click on Author
+	3.Add Pipeline
+	4.Under DataBricks tool Drag and Drop Notebook
+	5.Create LinkedService, in this access token is needed
+		1. For access token go to cluster , select user settings and click on Generate Token
+	6.Paste that token value in Linked Service
+	7. Select Notebook file to execute
+	8. To send Userinput to notebaook first add parameter name to pipeline then add base parameter to notebook, give parametername and value as "@pipeline().parameters.pipelineparameterName"
+	9.To access parameter value in Notebook write as dbutils.widgets.get('NotebookBaseParameterName')
+        10. Click on validate, if no errors click on debug
+	11. It's prompt for userinput value to pass
+	12. If it is Succeded then data is punched to COSMOSDB
+	
+	
